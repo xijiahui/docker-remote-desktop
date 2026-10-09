@@ -106,3 +106,7 @@ To stop the detached container:
 ```bash
 ./stop
 ```
+
+## Chrome支持
+
+需要在容器启动时增加两个参数以支持Chrome运行：--shm-size="1g" --cap-add=SYS_ADMIN 
