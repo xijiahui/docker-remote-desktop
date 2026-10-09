@@ -10,6 +10,9 @@ Docker image with RDP server using [xrdp](https://www.xrdp.org) on Ubuntu with [
 
 Images are built weekly using Ubuntu 24.04 (noble).
 
+## 支持中文
+增加中文显示和输入法支持
+
 ## Getting Started
 
 Run with an interactive bash session:
