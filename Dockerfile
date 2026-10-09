@@ -32,7 +32,15 @@ FROM ubuntu:$TAG
 RUN apt-get update && \
     DEBIAN_FRONTEND="noninteractive" apt-get install -y --no-install-recommends \
         dbus-x11 \
+        fonts-noto-cjk \
+        fonts-wqy-microhei \
+        fonts-wqy-zenhei \
         git \
+        ibus \
+        ibus-gtk \
+        ibus-gtk3 \
+        ibus-libpinyin \
+        libglib2.0-bin \
         locales \
         pavucontrol \
         pulseaudio \
@@ -44,6 +52,7 @@ RUN apt-get update && \
         xfce4 \
         xfce4-goodies \
         xfce4-pulseaudio-plugin \
+        xfonts-wqy \
         xorgxrdp \
         xrdp \
         xubuntu-icon-theme && \
@@ -55,12 +64,42 @@ RUN apt-get update && \
     DEBIAN_FRONTEND="noninteractive" apt-get install -y --no-install-recommends firefox && \
     rm -rf /var/lib/apt/lists/* && \
     deluser --remove-home ubuntu && \
-    locale-gen en_US.UTF-8
+    locale-gen en_US.UTF-8 zh_CN.UTF-8 && \
+    update-locale LANG=en_US.UTF-8
 
 COPY --from=builder /tmp/install /
 RUN sed -i 's|^Exec=.*|Exec=/usr/bin/pulseaudio|' /etc/xdg/autostart/pulseaudio-xrdp.desktop
 
-ENV LANG=en_US.UTF-8
+# Refresh the fontconfig cache so the CJK fonts are usable right away
+RUN fc-cache -f
+
+# Enable the US keyboard layout plus the intelligent pinyin engine in IBus
+RUN printf '%s\n' \
+        '[org.freedesktop.ibus.general]' \
+        "preload-engines=['xkb:us::eng', 'libpinyin']" \
+        > /usr/share/glib-2.0/schemas/99-ibus-cn.gschema.override && \
+    glib-compile-schemas /usr/share/glib-2.0/schemas
+
+# Start the IBus daemon inside every desktop session so Chinese can be typed
+RUN printf '%s\n' \
+        '[Desktop Entry]' \
+        'Type=Application' \
+        'Name=IBus' \
+        'Comment=Start the IBus input method daemon' \
+        'Exec=ibus-daemon --daemonize --replace --xim' \
+        'Terminal=false' \
+        'NoDisplay=true' \
+        > /etc/xdg/autostart/ibus-daemon.desktop
+
+# English desktop, but Chinese text still renders (CJK fonts + UTF-8) and can be
+# typed with IBus. LC_CTYPE=zh_CN.UTF-8 only affects character/width handling, the
+# interface language comes from LC_MESSAGES (LANG), which stays English.
+ENV LANG=en_US.UTF-8 \
+    LC_CTYPE=zh_CN.UTF-8 \
+    GTK_IM_MODULE=ibus \
+    QT_IM_MODULE=ibus \
+    XMODIFIERS=@im=ibus
+
 COPY entrypoint.sh /usr/bin/entrypoint
 EXPOSE 3389/tcp
 ENTRYPOINT ["/usr/bin/entrypoint"]
